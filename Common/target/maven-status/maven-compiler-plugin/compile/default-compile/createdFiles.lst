@@ -1,0 +1,12 @@
+by/krainet/common/dto/SignInResponse$SignInResponseBuilder.class
+by/krainet/common/dto/SignInRequest.class
+by/krainet/common/dto/UserDataResponse$UserDataResponseBuilder.class
+by/krainet/common/dto/ApiResponse$ApiResponseBuilder.class
+by/krainet/common/dto/SignUpResponse$SignUpResponseBuilder.class
+by/krainet/common/dto/UserDataResponse.class
+by/krainet/common/dto/SignUpRequest.class
+by/krainet/common/dto/ApiResponse.class
+by/krainet/common/dto/SignUpResponse.class
+by/krainet/common/enums/ROLE.class
+by/krainet/common/dto/SignInResponse.class
+by/krainet/common/dto/UserUpdateRequest.class
