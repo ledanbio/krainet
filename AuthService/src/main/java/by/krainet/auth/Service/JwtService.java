@@ -1,10 +1,15 @@
 package by.krainet.auth.Service;
 
+import by.krainet.auth.Exception.TokenExpiredException;
+import by.krainet.auth.Exception.TokenInvalidException;
 import by.krainet.common.enums.ROLE;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -55,19 +60,6 @@ public class JwtService {
                 .compact();
     }
 
-    private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
-
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-
     public Long extractUserId(String token) {
         return Long.parseLong(extractClaim(token, Claims::getSubject));
     }
@@ -102,7 +94,36 @@ public class JwtService {
         }
     }
 
-    public boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+    public void validateToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            if (claims.getExpiration().before(new Date())) {
+                throw new TokenExpiredException();
+            }
+        } catch (ExpiredJwtException e) {
+            throw new TokenExpiredException();
+        } catch (MalformedJwtException | SignatureException e) {
+            throw new TokenInvalidException(e.getMessage());
+        } catch (Exception e) {
+            throw new TokenInvalidException("unknown error");
+        }
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
     }
 }

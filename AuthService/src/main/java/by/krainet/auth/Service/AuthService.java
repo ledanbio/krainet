@@ -1,5 +1,7 @@
 package by.krainet.auth.Service;
 
+import by.krainet.auth.Exception.InvalidTokenException;
+import by.krainet.auth.Exception.UserAlreadyExistsException;
 import by.krainet.auth.Util.TokenExtractor;
 import by.krainet.auth.Service.kafka.AuthEventProducer;
 import by.krainet.auth.service.RefreshTokenService;
@@ -12,6 +14,7 @@ import by.krainet.common.enums.ROLE;
 import by.krainet.common.event.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,12 +34,10 @@ public class AuthService {
     @Transactional
     public TokenResponse register(SignUpRequest request) {
         if (authRepo.existsByUsername(request.getUsername())) {
-            log.warn("User already taken");
-            throw new IllegalArgumentException("User already taken: " + request.getUsername());
+            throw new UserAlreadyExistsException(request.getUsername());
         }
         if (authRepo.existsByEmail(request.getEmail())) {
-            log.warn("Email already registered");
-            throw new IllegalArgumentException("Email already registered: " + request.getEmail());
+            throw new UserAlreadyExistsException(request.getEmail());
         }
 
         User newUser = User.builder()
@@ -46,8 +47,6 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(ROLE.USER)
                 .build();
-
-        log.info("User {} registered", newUser.getUsername());
 
         eventProducer.sendUserRegisteredEvent(
                 UserRegisteredEvent.builder()
@@ -76,20 +75,13 @@ public class AuthService {
         User user;
         if (login.contains("@")) {
             user = authRepo.findByEmail(login)
-                    .orElseThrow(() -> {
-                        log.warn("Login failed: user not found ");
-                        return new BadCredentialsException("Invalid credentials");
-                    });
+                    .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         } else {
             user = authRepo.findByUsername(login)
-                    .orElseThrow(() -> {
-                        log.warn("Login failed: user not found ");
-                        return new BadCredentialsException("Invalid credentials");
-                    });
+                    .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            log.warn("Login failed: invalid password {}", login);
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -104,14 +96,14 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String rawToken) {
-        String token = tokenExtractor.extract(rawToken);
-        if (refreshTokenService.findByToken(token) == null) {
+    public void logout(String rawRefresh) {
+        String refresh = tokenExtractor.extract(rawRefresh);
+        if (refreshTokenService.findByToken(refresh) == null) {
             log.warn("Logout failed: session not found");
-            throw new IllegalArgumentException("Session not found");
+            throw new InvalidTokenException();
         }
 
-        log.debug("Logout: {}", refreshTokenService.findByToken(token).getUser().getUsername());
-        refreshTokenService.deleteByToken(token);
+        log.debug("Logout: {}", refreshTokenService.findByToken(refresh).getUser().getUsername());
+        refreshTokenService.deleteByToken(refresh);
     }
 }

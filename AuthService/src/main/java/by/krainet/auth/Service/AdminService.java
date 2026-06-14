@@ -2,6 +2,7 @@ package by.krainet.auth.Service;
 
 
 import by.krainet.auth.Entity.User;
+import by.krainet.auth.Exception.UserNotFoundException;
 import by.krainet.auth.Repository.AuthRepo;
 import by.krainet.common.dto.AdminEmailResponse;
 import by.krainet.common.dto.UserDataResponse;
@@ -29,7 +30,7 @@ public class AdminService {
         User user = authRepo.findById(id)
                 .orElseThrow(() -> {
                     log.warn("getUserByUserId Failed: User {} not found", id);
-                    return new EntityNotFoundException("User with id "+ id + " not found");
+                    return new UserNotFoundException(id);
                 });
 
         return UserDataResponse.builder()
@@ -44,10 +45,7 @@ public class AdminService {
     @Transactional
     public UserDataResponse updateDataByUserId(Long id, UserUpdateRequest request) {
         User user = authRepo.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("updateDataByUserId Failed: User {} not found", id);
-                    return new RuntimeException("User not found");
-                });
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         boolean haveChanges = false;
 
@@ -100,10 +98,7 @@ public class AdminService {
     @Transactional
     public void deleteUserByUserId(Long id) {
         User user = authRepo.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("deleteUserByUserId Failed: User {} not found", id);
-                    return new RuntimeException("User with id "+ id + " not found");
-                });
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         authRepo.delete(user);
         log.info("deleteUserByUserId Success: User deleted");
@@ -112,10 +107,7 @@ public class AdminService {
     @Transactional
     public void updateUserPasswordByUserId(Long id, String newPassword) {
         User user = authRepo.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("updateUserPasswordByUserId Failed: User {} not found", id);
-                    return new RuntimeException("User with id "+ id + " not found");
-                });
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         user.setPassword(passwordEncoder.encode(newPassword));
 

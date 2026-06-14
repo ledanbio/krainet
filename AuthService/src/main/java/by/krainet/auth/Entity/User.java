@@ -13,12 +13,16 @@ import java.util.List;
 
 
 @Entity
-@Table(name = "users")
+@Table(name = "users",
+        indexes = {
+                @Index(name = "idx_users_email",columnList = "email"),
+                @Index(name = "idx_users_username",columnList = "username")
+        })
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class User implements UserDetails  {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,46 +41,10 @@ public class User implements UserDetails  {
     @Column(name= "first_name", nullable = false)
     private String firstName;
 
-    @Column(name= "last_name")
+    @Column(name= "last_name", nullable = true)
     private String lastName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ROLE", nullable = false)
     private ROLE role;
-
-
-    //TODO: Enabled
-//    @Column(name = "Enabled")
-//    @Builder.Default
-//    private boolean enabled = true;
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
 }

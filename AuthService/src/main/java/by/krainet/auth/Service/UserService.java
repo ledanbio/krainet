@@ -1,10 +1,12 @@
 package by.krainet.auth.Service;
 
 
+import by.krainet.auth.Exception.UserNotFoundException;
 import by.krainet.auth.Util.TokenExtractor;
 import by.krainet.auth.Entity.User;
 import by.krainet.auth.Repository.AuthRepo;
 import by.krainet.auth.Service.kafka.AuthEventProducer;
+import by.krainet.common.dto.PasswordChangeRequest;
 import by.krainet.common.dto.UserDataResponse;
 import by.krainet.common.dto.UserUpdateRequest;
 import by.krainet.common.event.UserDeleteEvent;
@@ -31,23 +33,10 @@ public class UserService {
 
 
     public UserDataResponse getMe(String rawToken){
-        String token = tokenExtractor.extract(rawToken);
-         if (!jwtService.isTokenValid(token)){
-             log.warn("GetMe Failed: Invalid token");
-             throw new BadCredentialsException("Session not found");
-         }
-         User user;
-         Long userId = jwtService.extractUserId(token);
+        User user = findUserByToken(rawToken);
 
-         user = authRepo.findById(userId)
-                 .orElseThrow(() -> {
-                     log.warn("GetMe Failed: user not found");
-                     return new RuntimeException("User not found");
-                 });
-
-
-         log.debug("GetMe successful");
-         return UserDataResponse.builder()
+        log.debug("GetMe successful");
+        return UserDataResponse.builder()
                  .username(user.getUsername())
                  .lastName(user.getLastName())
                  .firstName(user.getFirstName())
@@ -58,17 +47,7 @@ public class UserService {
 
     @Transactional
     public UserDataResponse updateUserData(String rawToken, UserUpdateRequest request) {
-        String token = tokenExtractor.extract(rawToken);
-        if(!jwtService.isTokenValid(token)){
-            log.warn("updateUserData Failed: Invalid token");
-            throw new IllegalArgumentException("Session not found");
-        }
-        User user;
-        user = authRepo.findById(jwtService.extractUserId(token))
-                .orElseThrow(() -> {
-                    log.warn("GetMe Failed: User not found");
-                    return new RuntimeException("User not found");
-                });
+        User user = findUserByToken(rawToken);
 
         boolean haveChanges = false;
         String changes = "";
@@ -132,23 +111,16 @@ public class UserService {
 
     @Transactional
     public void updateCurrentUserPassword(
-            String rawToken, String oldPassword, String newPassword
+            String rawToken, PasswordChangeRequest request
     ){
-        String token = tokenExtractor.extract(rawToken);
-        Long userId = jwtService.extractUserId(token);
+        User user = findUserByToken(rawToken);
 
-        User user = authRepo.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("updateCurrentUserPassword Failed: user not found");
-                    return new EntityNotFoundException("User not found");
-                });
-
-        if(!passwordEncoder.matches(oldPassword, user.getPassword())) {
+        if(!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid credentials");
         }
 
         log.info("updateCurrentUserPassword Success: password changed");
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
         authRepo.save(user);
     }
@@ -156,19 +128,7 @@ public class UserService {
 
     @Transactional
     public void deleteCurrentUser(String rawToken) {
-        String token = tokenExtractor.extract(rawToken);
-
-        if(!jwtService.isTokenValid(token)){
-            log.warn("deleteCurrentUser failed: Invalid token");
-            throw new IllegalArgumentException("Session not found");
-        }
-        User user;
-        Long userId = jwtService.extractUserId(token);
-        user = authRepo.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("deleteCurrentUser failed: user not found");
-                    return new RuntimeException("User not found");
-                });
+        User user = findUserByToken(rawToken);
 
         eventProducer.sendUserDeleteEvent(
                 UserDeleteEvent.builder()
@@ -179,5 +139,13 @@ public class UserService {
 
         log.info("deleteCurrentUser Success: user deleted");
         authRepo.delete(user);
+    }
+
+    private User findUserByToken(String rawToken){
+        String token = tokenExtractor.extract(rawToken);
+
+        Long userId = jwtService.extractUserId(token);
+        return authRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 }

@@ -1,5 +1,7 @@
 package by.krainet.auth.Config;
 
+import by.krainet.auth.Handler.CustomAccessDeniedHandler;
+import by.krainet.auth.Handler.CustomAuthenticationEntryPoint;
 import by.krainet.auth.Security.Jwt.JwtFilter;
 import by.krainet.auth.Security.ServiceApiKeyFilter;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,8 @@ public class SecurityConfig {
     @Value("${security.password-encoder.bcrypt.strength:10}")
     private int bcryptStrength;
 
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
     private final JwtFilter jwtFilter;
     private final ServiceApiKeyFilter serviceApiKeyFilter;
 
@@ -44,12 +48,20 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 //                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/register").permitAll()
                         .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/logout-all").permitAll()
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/api-docs/**",
+                                        "/v3/api-docs/**"
+                                ).permitAll()
                         .requestMatchers("/api/v1/admin/emails").hasAnyRole("ADMIN", "SERVICE")
                         .anyRequest().authenticated()
                 )
@@ -89,10 +101,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(bcryptStrength);
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
     }
 }

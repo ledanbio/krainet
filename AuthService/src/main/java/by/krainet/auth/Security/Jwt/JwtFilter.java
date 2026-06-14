@@ -1,7 +1,7 @@
 package by.krainet.auth.Security.Jwt;
 
-
-
+import by.krainet.auth.Exception.TokenExpiredException;
+import by.krainet.auth.Exception.TokenInvalidException;
 import by.krainet.auth.Service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
-
 
 @Slf4j
 @Component
@@ -44,26 +44,62 @@ public class JwtFilter extends OncePerRequestFilter {
         String jwt = authHeader.substring(7);
 
         try {
-            if (jwtService.isTokenValid(jwt)) {
+            jwtService.validateToken(jwt);
 
-                Long userId = jwtService.extractUserId(jwt);
-                String role = jwtService.extractRole(jwt).name();
+            Long userId = jwtService.extractUserId(jwt);
+            String role = jwtService.extractRole(jwt).name();
 
-                if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    var authToken = new UsernamePasswordAuthenticationToken(
-                            userId,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var authToken = new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
 
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
             }
-        } catch (Exception e) {
-            log.error("JWT Token validation error: {}", e.getMessage());
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (TokenExpiredException e) {
+            log.warn("JWT expired: uri={}, tokenPrefix={}",
+                    request.getRequestURI(), jwt.substring(0, Math.min(20, jwt.length())));
+            writeProblemDetail(response, 401, "token-expired", "Token has expired",
+                    request.getRequestURI());
+
+        } catch (TokenInvalidException e) {
+            log.warn("JWT invalid: uri={}, reason={}", request.getRequestURI(), e.getMessage());
+            writeProblemDetail(response, 401, "token-invalid", e.getMessage(),
+                    request.getRequestURI());
+
+        } catch (Exception e) {
+            log.error("JWT unexpected error: uri={}, error={}", request.getRequestURI(), e.getMessage());
+            writeProblemDetail(response, 401, "token-error", "Authentication failed",
+                    request.getRequestURI());
+        }
+    }
+
+    private void writeProblemDetail(HttpServletResponse response, int status,
+                                    String type, String detail, String instance) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/problem+json");
+
+        String json = String.format(
+                "{\"type\":\"https://krainet.by/api/v1/errors/%s\"," +
+                        "\"title\":\"%s\"," +
+                        "\"status\":%d," +
+                        "\"detail\":\"%s\"," +
+                        "\"instance\":\"%s\"," +
+                        "\"timestamp\":\"%s\"}",
+                type,
+                type.replace("-", " "),
+                status,
+                detail,
+                instance,
+                Instant.now()
+        );
+
+        response.getWriter().write(json);
     }
 }
