@@ -3,3 +3,17 @@
 /.idea/workspace.xml
 
 .env
+/target/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+.idea_modules/
+.classpath
+.project
+.settings/
+*.hprof
+
+*.log

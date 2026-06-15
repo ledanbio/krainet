@@ -1,1 +1,0 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"by.krainet.common.dto"},{"l":"by.krainet.common.enums"}];updateSearchResults();
