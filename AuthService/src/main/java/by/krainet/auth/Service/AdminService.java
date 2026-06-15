@@ -1,11 +1,12 @@
 package by.krainet.auth.Service;
 
-
 import by.krainet.auth.Entity.User;
+import by.krainet.auth.Exception.UserAlreadyAdminException;
 import by.krainet.auth.Exception.UserNotFoundException;
 import by.krainet.auth.Repository.AuthRepo;
 import by.krainet.common.dto.AdminEmailResponse;
 import by.krainet.common.dto.UserDataResponse;
+import by.krainet.common.dto.UserListResponse;
 import by.krainet.common.dto.UserUpdateRequest;
 import by.krainet.common.enums.ROLE;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,6 +26,7 @@ public class AdminService {
     private final AuthRepo authRepo;
     private final PasswordEncoder passwordEncoder;
 
+    // ==================== СУЩЕСТВУЮЩИЕ МЕТОДЫ ====================
 
     public UserDataResponse getUserByUserId(Long id) {
         User user = authRepo.findById(id)
@@ -40,7 +42,6 @@ public class AdminService {
                 .username(user.getUsername())
                 .build();
     }
-
 
     @Transactional
     public UserDataResponse updateDataByUserId(Long id, UserUpdateRequest request) {
@@ -80,13 +81,8 @@ public class AdminService {
         }
         else {
             log.info("updateDataByUserId : Nothing to change");
-            return UserDataResponse.builder()
-                    .username(user.getUsername())
-                    .email(user.getEmail())
-                    .firstName(user.getFirstName())
-                    .lastName(user.getLastName())
-                    .build();
         }
+
         return UserDataResponse.builder()
                 .username(user.getUsername())
                 .email(user.getEmail())
@@ -110,7 +106,6 @@ public class AdminService {
                 .orElseThrow(() -> new UserNotFoundException(id));
 
         user.setPassword(passwordEncoder.encode(newPassword));
-
         authRepo.save(user);
         log.info("updateUserPasswordByUserId Success: User password changed");
     }
@@ -124,6 +119,66 @@ public class AdminService {
         log.debug("getAdminEmails Success");
         return AdminEmailResponse.builder()
                 .emails(emails)
+                .build();
+    }
+
+    @Transactional
+    public UserDataResponse promoteUserToAdmin(Long id) {
+        User user = authRepo.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("promoteUserToAdmin Failed: User {} not found", id);
+                    return new UserNotFoundException(id);
+                });
+
+        if (user.getRole() == ROLE.ADMIN) {
+            log.warn("promoteUserToAdmin Failed: User {} already admin", id);
+            throw new UserAlreadyAdminException(id);
+        }
+
+        user.setRole(ROLE.ADMIN);
+        authRepo.save(user);
+
+        log.info("promoteUserToAdmin Success: User {} promoted to ADMIN", id);
+        return UserDataResponse.builder()
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .build();
+    }
+
+    public UserListResponse getAllUsers() {
+        List<User> users = authRepo.findAll();
+
+        List<UserListResponse.UserSummary> summaries = users.stream()
+                .map(u -> UserListResponse.UserSummary.builder()
+                        .id(u.getId())
+                        .username(u.getUsername())
+                        .email(u.getEmail())
+                        .build())
+                .toList();
+
+        log.info("getAllUsers Success: {} users found", summaries.size());
+        return UserListResponse.builder()
+                .users(summaries)
+                .totalCount(summaries.size())
+                .build();
+    }
+
+    public UserDataResponse getUserByUsername(String username) {
+        User user = authRepo.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("getUserByUsername Failed: User {} not found", username);
+                    return new UserNotFoundException(username);
+                });
+
+        log.info("getUserByUsername Success: User {} found", username);
+        return UserDataResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .build();
     }
 }

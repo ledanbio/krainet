@@ -1,4 +1,4 @@
-package by.krainet.auth.Security;
+package by.krainet.auth.Util;
 
 
 import by.krainet.auth.Entity.User;
@@ -7,12 +7,14 @@ import by.krainet.common.enums.ROLE;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
 
 @Component
+@Order(1)
 @RequiredArgsConstructor
 @Slf4j
 public class AdminInitializer implements CommandLineRunner {

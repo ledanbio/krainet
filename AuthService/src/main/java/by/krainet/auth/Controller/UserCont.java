@@ -48,11 +48,8 @@ public class UserCont {
     })
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserDataResponse> me(
-            @RequestHeader("Authorization") @Valid @Parameter(name = "accessToken", example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoidXNlciIsImV4cCI6OTk5OTk5OTk5OX0.Qb4G6U7B8c9dE0fF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ")
-            String token
-    ){
-        UserDataResponse response = userService.getMe(token);
+    public ResponseEntity<UserDataResponse> me(){
+        UserDataResponse response = userService.getMe();
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(response);
@@ -81,12 +78,10 @@ public class UserCont {
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDataResponse> updateUserData (
-            @Parameter(name = "accessToken", example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoidXNlciIsImV4cCI6OTk5OTk5OTk5OX0.Qb4G6U7B8c9dE0fF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ")
-            @RequestHeader("Authorization") String token,
             @Parameter(name = "Измененные данные пользователя", schema = @Schema(implementation = UserUpdateRequest.class))
             @RequestBody @Valid UserUpdateRequest request
     ){
-        UserDataResponse response = userService.updateUserData(token, request);
+        UserDataResponse response = userService.updateUserData(request);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -117,12 +112,10 @@ public class UserCont {
     @PutMapping("/me/password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateCurrentUserPassword (
-            @Parameter(name = "accessToken", example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoidXNlciIsImV4cCI6OTk5OTk5OTk5OX0.Qb4G6U7B8c9dE0fF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ")
-            @RequestHeader("Authorization") String token,
             @Parameter(name = "Запрос на изменение пароля",schema = @Schema(implementation = PasswordChangeRequest.class))
             @RequestBody @Valid PasswordChangeRequest request
             ){
-        userService.updateCurrentUserPassword(token, request);
+        userService.updateCurrentUserPassword(request);
         return ResponseEntity.noContent().build();
     }
 
@@ -147,11 +140,8 @@ public class UserCont {
     })
     @DeleteMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> deleteCurrentUser(
-            @Parameter(name = "accessToken", example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoidXNlciIsImV4cCI6OTk5OTk5OTk5OX0.Qb4G6U7B8c9dE0fF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ")
-            @RequestHeader("Authorization") String token
-    ){
-        userService.deleteCurrentUser(token);
+    public ResponseEntity<Void> deleteCurrentUser(){
+        userService.deleteCurrentUser();
         return ResponseEntity.noContent().build();
     }
 }

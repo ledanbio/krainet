@@ -132,6 +132,25 @@ public class GlobalExceptionHandler {
     }
 
 
+    @ExceptionHandler(UserAlreadyAdminException.class)
+    public ResponseEntity<ProblemDetail> handleUserAlreadyAdmin(
+            UserAlreadyAdminException e,
+            HttpServletRequest request) {
+
+        log.warn(e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ProblemDetail.builder()
+                        .type(ErrorTypes.USER_ALREADY_ADMIN)
+                        .title("User already admin")
+                        .status(400)
+                        .detail(e.getMessage())
+                        .instance(URI.create(request.getRequestURI()))
+                        .timestamp(Instant.now())
+                        .build());
+    }
+
 
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -193,6 +212,24 @@ public class GlobalExceptionHandler {
                         .title("Constraint violation")
                         .status(400)
                         .detail(details)
+                        .instance(URI.create(request.getRequestURI()))
+                        .timestamp(Instant.now())
+                        .build());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalState(
+            IllegalStateException e,
+            HttpServletRequest request) {
+        log.warn("Illegal state: {}", e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ProblemDetail.builder()
+                        .type(ErrorTypes.VALIDATION_ERROR)
+                        .title("Bad request")
+                        .status(400)
+                        .detail(e.getMessage())
                         .instance(URI.create(request.getRequestURI()))
                         .timestamp(Instant.now())
                         .build());

@@ -3,6 +3,7 @@ package by.krainet.auth.Controller;
 import by.krainet.auth.Service.AdminService;
 import by.krainet.common.dto.AdminEmailResponse;
 import by.krainet.common.dto.UserDataResponse;
+import by.krainet.common.dto.UserListResponse;
 import by.krainet.common.dto.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,11 +24,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/v1/admin")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Панель админа", description = "Получение данных пользователя по айди, обновление данных пользователя по айди, обновление пароля пользователя по айди, удаление пользователя по айди")
+@Tag(name = "Панель админа", description = "Управление пользователями: CRUD, назначение ролей, поиск")
 public class AdminCont {
 
     private final AdminService adminService;
-
 
     @Operation(
             summary = "Получение данных пользователя",
@@ -55,8 +55,6 @@ public class AdminCont {
     ){
         return ResponseEntity.ok(adminService.getUserByUserId(id));
     }
-
-
 
     @Operation(
             summary = "Обновление данных пользователя",
@@ -94,11 +92,9 @@ public class AdminCont {
         return ResponseEntity.ok(adminService.updateDataByUserId(id, request));
     }
 
-
     @Operation(
             summary = "Обновление пароля пользователя",
-            description = "Устанавливает новый пароль для пользователя по айди. " +
-                    "Требует роль ADMIN"
+            description = "Устанавливает новый пароль для пользователя по айди. Требует роль ADMIN"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Пароль успешно изменён"),
@@ -130,10 +126,6 @@ public class AdminCont {
         return ResponseEntity.noContent().build();
     }
 
-
-
-
-
     @Operation(
             summary = "Удаление пользователя",
             description = "Безвозвратно удаляет пользователя и все связанные данные по айди. Требует роль ADMIN."
@@ -159,14 +151,9 @@ public class AdminCont {
         return ResponseEntity.noContent().build();
     }
 
-
-
-
-
     @Operation(
             summary = "Получение email администраторов",
-            description = "Возвращает список email всех пользователей с ролью ADMIN. " +
-                    "Доступно для ролей ADMIN и SERVICE (для межсервисного взаимодействия)."
+            description = "Возвращает список email всех пользователей с ролью ADMIN. Доступно для ролей ADMIN и SERVICE."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -182,5 +169,89 @@ public class AdminCont {
     @PreAuthorize("hasAnyRole('ADMIN','SERVICE')")
     public ResponseEntity<AdminEmailResponse> getAdminEmails(){
         return ResponseEntity.ok(adminService.getAdminEmails());
+    }
+
+
+    @Operation(
+            summary = "Назначить пользователя администратором",
+            description = "Изменяет роль пользователя на ADMIN. Только для существующих пользователей с ролью USER. Требует роль ADMIN."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Роль успешно изменена",
+                    content = @Content(schema = @Schema(implementation = UserDataResponse.class))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Пользователь уже является администратором",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Недостаточно прав (не ADMIN)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/users/{id}/promote")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDataResponse> promoteUserToAdmin(
+            @Parameter(description = "ID пользователя", example = "42", required = true)
+            @PathVariable Long id
+    ){
+        return ResponseEntity.ok(adminService.promoteUserToAdmin(id));
+    }
+
+
+
+
+    @Operation(
+            summary = "Получить список всех пользователей",
+            description = "Возвращает всех пользователей с id, username и email. Требует роль ADMIN."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Список пользователей получен",
+                    content = @Content(schema = @Schema(implementation = UserListResponse.class))),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Недостаточно прав (не ADMIN)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserListResponse> getAllUsers(){
+        return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+
+
+    @Operation(
+            summary = "Поиск пользователя по username",
+            description = "Возвращает данные пользователя с id, username, email по точному совпадению. Требует роль ADMIN."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Пользователь найден",
+                    content = @Content(schema = @Schema(implementation = UserDataResponse.class))),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Пользователь не найден",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Недостаточно прав (не ADMIN)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/users/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDataResponse> getUserByUsername(
+            @Parameter(description = "Username для поиска", example = "john_doe", required = true)
+            @RequestParam String username
+    ){
+        return ResponseEntity.ok(adminService.getUserByUsername(username));
     }
 }

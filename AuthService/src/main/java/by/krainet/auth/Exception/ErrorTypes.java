@@ -14,6 +14,7 @@ public final class ErrorTypes {
     public static final URI INTERNAL_ERROR = URI.create(BASE + "internal-error");
     public static final URI TOKEN_EXPIRED = URI.create(BASE + "token-expired");
     public static final URI TOKEN_INVALID = URI.create(BASE + "token-invalid");
+    public static final URI USER_ALREADY_ADMIN = URI.create(BASE + "user-already-admin");
 
     private ErrorTypes() {}
 }
