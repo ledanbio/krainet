@@ -39,6 +39,19 @@ public class EmailService {
         log.info("sendAdminNotificationUpdated Success: mail send to {}", adminEmail);
     }
 
+    public void sendAdminNotificationUpdatedPassword(String adminEmail,String email, String username, String rawOldPassword, String rawNewPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(adminEmail);
+        message.setSubject("Изменение пароля пользователя " + username);
+        message.setText(String.format(
+                "Изменен пароль пользователя с именем - %s" + ", паролем - %s"+ " и почтой - %s\n"+ "Имеет новый пароль - %s",
+                username, rawOldPassword, email, rawNewPassword
+        ));
+
+        mailSender.send(message);
+        log.info("sendAdminNotificationUpdated Success: mail send to {}", adminEmail);
+    }
+
     public void sendAdminNotificationDeleted(String adminEmail, String email, String username) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(adminEmail);

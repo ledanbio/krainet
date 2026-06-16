@@ -10,6 +10,7 @@ import by.krainet.common.dto.UserDataResponse;
 import by.krainet.common.dto.UserUpdateRequest;
 import by.krainet.common.event.UserDeleteEvent;
 import by.krainet.common.event.UserUpdateEvent;
+import by.krainet.common.event.UserUpdatePasswordEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -121,7 +122,16 @@ public class UserService {
         log.info("updateCurrentUserPassword Success: password changed");
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
+
         authRepo.save(user);
+        eventProducer.sendUserUpdatePasswordEvent(
+                UserUpdatePasswordEvent.builder()
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .rawOldPassword(request.getOldPassword())
+                        .rawNewPassword(request.getNewPassword())
+                        .build()
+        );
     }
 
 

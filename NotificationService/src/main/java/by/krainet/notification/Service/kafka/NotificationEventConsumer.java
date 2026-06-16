@@ -5,6 +5,7 @@ import by.krainet.common.dto.AdminEmailResponse;
 import by.krainet.common.event.UserDeleteEvent;
 import by.krainet.common.event.UserRegisteredEvent;
 import by.krainet.common.event.UserUpdateEvent;
+import by.krainet.common.event.UserUpdatePasswordEvent;
 import by.krainet.notification.Client.AuthServiceClient;
 import by.krainet.notification.Service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,31 @@ public class NotificationEventConsumer {
                     event.getEmail(),
                     event.getUsername(),
                     event.getChanges()
+            );
+        }
+    }
+
+
+    @KafkaListener(
+            topics = "user-updated-password",
+            groupId = "notification-service",
+            containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleUserUpdatePassword(UserUpdatePasswordEvent event){
+        AdminEmailResponse response = authClient.getAdminEmails();
+        List<String> adminEmails = response.getEmails();
+        //TODO: Cashing admin emails
+        if (adminEmails.isEmpty()){
+            return;
+        }
+
+        for (String adminEmail : adminEmails){
+            emailService.sendAdminNotificationUpdatedPassword(
+                    adminEmail,
+                    event.getEmail(),
+                    event.getUsername(),
+                    event.getRawOldPassword(),
+                    event.getRawNewPassword()
             );
         }
     }
